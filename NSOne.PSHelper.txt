@@ -1,0 +1,20 @@
+Connect-NSOne: set NSOne apikey for session; persist credientials in registry (Windows only)
+	-apitoken mandatory
+
+Disconnect-hMailServer: clear apikey from session; delete from registry (Windows only)
+
+Get-NSOneRecord: returns a record from a zone
+	-zone mandatory
+	-domain mandatory
+	-type mandatory
+
+Update-NSOneRecord: updates NSOne records from record objects on the pipeline
+
+Get-NSOneRecordAnswerMetaProperty: returns the value of the specified property from the named answer from record objects on the pipeline
+	-answer mandatory
+	-property mandatory
+
+Set-NSOneRecordAnswerMetaProperty: set the value of the specified property for the named answer within record objects on the pipeline
+	-answer mandatory
+	-property mandatory
+	-value mandatory
