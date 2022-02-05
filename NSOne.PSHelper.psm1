@@ -13,7 +13,6 @@ function Disconnect-NSOne {
     $nsoneConfig.apitoken = $null
 }
 
-
 function Get-NSOneRecord {
     param(
         [Parameter(Mandatory=$true,Position=0)][string]$zone,
@@ -133,18 +132,43 @@ function Set-NSOneRecordAnswer {
     [cmdletbinding()]
     param(
         [Parameter(ValueFromPipeline)][PSObject[]]$records,
-        [Parameter(Mandatory=$true,Position=0)][string]$answer,
+        [Parameter(Mandatory=$true,Position=0,ParameterSetName="byName")][string]$answer,
+        [Parameter(Mandatory=$true,Position=0,ParameterSetName="byIndex")][string]$index,
         [Parameter(Mandatory=$true,Position=1)][string]$value
     )
     begin {
     }
     process {
         foreach ($record in $records) {
-            ($record.answers | where {$_.answer -eq $answer}).answer = @($value) 
-            $record
+            if ($answer) {
+                $answers = $record.answers | where {$_.answer -eq $answer}
+                if ($answers.answer) {
+                    ($record.answers | where {$_.answer -eq $answer}).answer = @($value) 
+                    $record
+                }
+            } else {
+                $answers = $record.answers[$index]
+                if ($answers.answer) {
+                    $record.answers[$index].answer = @($value) 
+                    $record
+                }
+            }
         }
     }
     end {
+    }
+}
+
+function Get-NSOneDynamicIP {
+    param(
+        [Parameter(Mandatory=$true,Position=0)][string]$uri,
+        [Parameter(Mandatory=$false,Position=1)][string]$method = 'Get'
+    )
+    try {
+        $response = (invoke-webrequest -uri $uri -method $method).Content
+        ($response | Select-String -Pattern "\d{1,3}(\.\d{1,3}){3}" -AllMatches).Matches.Value
+    } catch {
+        Set-NSOneRESTErrorResponse
     }
 }
 
