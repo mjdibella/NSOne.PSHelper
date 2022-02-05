@@ -20,6 +20,7 @@ Set-NSOneRecordAnswerMetaProperty: set the value of the specified property for t
 	-value mandatory
 
 Get-NSOneRecordAnswer: returns answers from record objects on the pipeline
+    -index optional, index of answer to return
 
 Set-NSOneRecordAnswerMetaProperty: change the value of a specified answer within record objects on the pipeline
 	-answer mandatory unless index specified, current value of answer to set
