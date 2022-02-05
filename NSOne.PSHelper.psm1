@@ -10,10 +10,7 @@ function Connect-NSOne {
 }
 
 function Disconnect-NSOne {
-    Remove-ItemProperty -Path $nsoneConfig.registryURL -Name apitoken | Out-Null
-    $nsoneconfig.tenant = $null
     $nsoneConfig.apitoken = $null
-    $nsoneConfig.logtoken = $null
 }
 
 function Get-NSOneRecord {
