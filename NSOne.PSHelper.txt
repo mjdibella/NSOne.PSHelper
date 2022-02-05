@@ -18,3 +18,9 @@ Set-NSOneRecordAnswerMetaProperty: set the value of the specified property for t
 	-answer mandatory
 	-property mandatory
 	-value mandatory
+
+Get-NSOneRecordAnswer: returns answers from record objects on the pipeline
+
+Set-NSOneRecordAnswerMetaProperty: change the value of a specified answer within record objects on the pipeline
+	-answer mandatory, current value of answer
+	-value mandatory, new answer value
