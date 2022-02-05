@@ -26,7 +26,6 @@ function Get-NSOneRecord {
     $uri = "https://api.nsone.net/v1/zones/$zone/$domain/$type"
     try {
         $webresponse = invoke-webrequest -uri $uri -method Get -headers @{"X-NSONE-Key" = "$($nsoneConfig.apitoken)"}
-        $webresponse.content
         ConvertFrom-JSON $webresponse.Content
     } catch {
         Set-NSOneRESTErrorResponse
@@ -61,48 +60,51 @@ function Update-NSOneRecord {
 }
 
 function Get-NSOneRecordAnswerMetaProperty {
+    [cmdletbinding()]
     param(
-        [Parameter(Mandatory=$true)][string]$zone,
-        [Parameter(Mandatory=$true)][string]$domain,
-        [Parameter(Mandatory=$true)][string]$type,
-        [Parameter(Mandatory=$true)][string]$answer,
-        [Parameter(Mandatory=$true)][string]$property
+        [Parameter(ValueFromPipeline)][PSObject[]]$records,
+        [Parameter(Mandatory=$true,Position=0)][string]$answer,
+        [Parameter(Mandatory=$true,Position=1)][string]$property
     )
     <#
     curl -X GET -H "X-NSONE-Key: $API_KEY" https://api.nsone.net/v1/zones/:zone/:domain/:type
     #>
-    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-    $uri = "https://api.nsone.net/v1/zones/$zone/$domain/$type"
-    try {
-        $webresponse = invoke-webrequest -uri $uri -method Get -headers @{"X-NSONE-Key" = "$($nsoneConfig.apitoken)"}
-        $record = ConvertFrom-JSON $webresponse.Content
-        ($record.answers | where {$_.answer -eq $answer}).meta.$property
-    } catch {
-        Set-NSOneRESTErrorResponse
+    begin {
+    }
+    process {
+        foreach ($record in $records) {
+            $value = ($record.answers | where {$_.answer -eq $answer}).meta.$property
+            $resultObject = New-Object PSObject
+            $resultObject | Add-Member Noteproperty Zone $record.zone
+            $resultObject | Add-Member Noteproperty Domain $record.domain
+            $resultObject | Add-Member Noteproperty Type $record.type
+            $resultObject | Add-Member Noteproperty Answer $answer
+            $resultObject | Add-Member Noteproperty Property $property
+            $resultObject | Add-Member Noteproperty Value $value
+            $resultObject
+        }
+    }
+    end {
     }
 }
 
 function Set-NSOneRecordAnswerMetaProperty {
+    [cmdletbinding()]
     param(
-        [Parameter(Mandatory=$true)][string]$zone,
-        [Parameter(Mandatory=$true)][string]$domain,
-        [Parameter(Mandatory=$true)][string]$type,
-        [Parameter(Mandatory=$true)][string]$answer,
-        [Parameter(Mandatory=$true)][string]$property,
-        [Parameter(Mandatory=$true)][string]$value
+        [Parameter(ValueFromPipeline)][PSObject[]]$records,
+        [Parameter(Mandatory=$true,Position=0)][string]$answer,
+        [Parameter(Mandatory=$true,Position=1)][string]$property,
+        [Parameter(Mandatory=$true,Position=2)][string]$value
     )
-    <#
-    curl -X GET -H "X-NSONE-Key: $API_KEY" https://api.nsone.net/v1/zones/:zone/:domain/:type
-    #>
-    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-    $uri = "https://api.nsone.net/v1/zones/$zone/$domain/$type"
-    try {
-        $webresponse = invoke-webrequest -uri $uri -method Get -headers @{"X-NSONE-Key" = "$($nsoneConfig.apitoken)"}
-        $record = ConvertFrom-JSON $webresponse.Content
-        ($record.answers | where {$_.answer -eq $answer}).meta.$property = $value
-        $record
-    } catch {
-        Set-NSOneRESTErrorResponse
+    begin {
+    }
+    process {
+        foreach ($record in $records) { 
+            ($record.answers | where {$_.answer -eq $answer}).meta.$property = $value
+            $record
+        }
+    }
+    end {
     }
 }
 
