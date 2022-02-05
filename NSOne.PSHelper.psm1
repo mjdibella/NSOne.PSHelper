@@ -13,11 +13,12 @@ function Disconnect-NSOne {
     $nsoneConfig.apitoken = $null
 }
 
+
 function Get-NSOneRecord {
     param(
-        [Parameter(Mandatory=$true)][string]$zone,
-        [Parameter(Mandatory=$true)][string]$domain,
-        [Parameter(Mandatory=$true)][string]$type
+        [Parameter(Mandatory=$true,Position=0)][string]$zone,
+        [Parameter(Mandatory=$true,Position=1)][string]$domain,
+        [Parameter(Mandatory=$true,Position=2)][string]$type
     )
     <#
     curl -X GET -H "X-NSONE-Key: $API_KEY" https://api.nsone.net/v1/zones/:zone/:domain/:type
@@ -66,9 +67,6 @@ function Get-NSOneRecordAnswerMetaProperty {
         [Parameter(Mandatory=$true,Position=0)][string]$answer,
         [Parameter(Mandatory=$true,Position=1)][string]$property
     )
-    <#
-    curl -X GET -H "X-NSONE-Key: $API_KEY" https://api.nsone.net/v1/zones/:zone/:domain/:type
-    #>
     begin {
     }
     process {
@@ -101,6 +99,48 @@ function Set-NSOneRecordAnswerMetaProperty {
     process {
         foreach ($record in $records) { 
             ($record.answers | where {$_.answer -eq $answer}).meta.$property = $value
+            $record
+        }
+    }
+    end {
+    }
+}
+
+function Get-NSOneRecordAnswer {
+    [cmdletbinding()]
+    param(
+        [Parameter(ValueFromPipeline)][PSObject[]]$records
+    )
+    begin {
+    }
+    process {
+        foreach ($record in $records) {
+            foreach ($answer in $record.answers) {
+                $resultObject = New-Object PSObject
+                $resultObject | Add-Member Noteproperty Zone $record.zone
+                $resultObject | Add-Member Noteproperty Domain $record.domain
+                $resultObject | Add-Member Noteproperty Type $record.type
+                $resultObject | Add-Member Noteproperty Answer $answer[0]
+                $resultObject
+            }
+        }
+    }
+    end {
+    }
+}
+
+function Set-NSOneRecordAnswer {
+    [cmdletbinding()]
+    param(
+        [Parameter(ValueFromPipeline)][PSObject[]]$records,
+        [Parameter(Mandatory=$true,Position=0)][string]$answer,
+        [Parameter(Mandatory=$true,Position=1)][string]$value
+    )
+    begin {
+    }
+    process {
+        foreach ($record in $records) {
+            ($record.answers | where {$_.answer -eq $answer}).answer = @($value) 
             $record
         }
     }
