@@ -6,11 +6,31 @@ function Connect-NSOne {
         [Parameter(Mandatory=$true)][string]$apitoken
     )
     $nsoneConfig.apitoken = $apitoken
+    New-Item -Path $nsoneConfig.registryURL -Force | Out-null
+    New-ItemProperty -Path $nsoneConfig.registryURL -Name apitoken -Value $apitoken -Force | Out-Null
     Write-host "Connected to NSOne`n"
 }
 
 function Disconnect-NSOne {
+    Remove-ItemProperty -Path $nsoneConfig.registryURL -Name apitoken | Out-Null
     $nsoneConfig.apitoken = $null
+}
+
+function Get-NSOneZone {
+    param(
+        [Parameter(Mandatory=$true,Position=0)][string]$zone
+    )
+    <#
+    curl -X GET -H "X-NSONE-Key: $API_KEY" https://api.nsone.net/v1/zones/{zone_name}
+    #>
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    $uri = "https://api.nsone.net/v1/zones/$zone"
+    try {
+        $webresponse = invoke-webrequest -uri $uri -method Get -headers @{"X-NSONE-Key" = "$($nsoneConfig.apitoken)"}
+        ConvertFrom-JSON $webresponse.Content
+    } catch {
+        Set-NSOneRESTErrorResponse
+    }
 }
 
 function Get-NSOneRecord {
@@ -29,6 +49,54 @@ function Get-NSOneRecord {
         ConvertFrom-JSON $webresponse.Content
     } catch {
         Set-NSOneRESTErrorResponse
+    }
+}
+
+function Get-NSOneRecord {
+    param(
+        [Parameter(Mandatory=$true,Position=0)][string]$zone,
+        [Parameter(Mandatory=$true,Position=1)][string]$domain,
+        [Parameter(Mandatory=$true,Position=2)][string]$type
+    )
+    <#
+    curl -X GET -H "X-NSONE-Key: $API_KEY" https://api.nsone.net/v1/zones/:zone/:domain/:type
+    #>
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    $uri = "https://api.nsone.net/v1/zones/$zone/$domain/$type"
+    try {
+        $webresponse = invoke-webrequest -uri $uri -method Get -headers @{"X-NSONE-Key" = "$($nsoneConfig.apitoken)"}
+        ConvertFrom-JSON $webresponse.Content
+    } catch {
+        Set-NSOneRESTErrorResponse
+    }
+}
+
+function Update-NSOneZone {
+    [cmdletbinding()]
+    param(
+        [Parameter(ValueFromPipeline)][PSObject[]]$records
+    )
+    <#
+    curl -X POST -H "X-NSONE-Key: $API_KEY" -d '{ "expiry": 0, "hostmaster": "string", "nx_ttl": 0, "primary": { "enabled": true, "secondaries": [ { "ip": "string", "networks": [0],"notify": true, "port": 0 }]}, "refresh": 0, "retry": 0, "ttl": 0, "zone": "string", "local_tags": ["string"], "tags": {}}﻿'  https://api.nsone.net/v1/zones/<zone_name>
+    #>
+    begin {
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    }
+    process {
+        foreach ($record in $records) { 
+            $uri = "https://api.nsone.net/v1/zones/$($record.zone)"
+            #$uri = "https://minerva.sfatech.net/v1/zones/$($record.zone)"
+            try {
+                $zonedata = $record | Select-Object -Property expiry, hostmaster, nx_ttl, primary, local_tags, tags
+                $body = ConvertTo-JSON -Depth 9 $zonedata
+                $webresponse = invoke-webrequest -uri $uri -method Post -headers @{"X-NSONE-Key" = "$($nsoneConfig.apitoken)"} -body $body -ContentType "application/json"
+                ConvertFrom-JSON $webresponse.Content
+            } catch {
+                Set-NSOneRESTErrorResponse
+            }
+        }
+    }
+    end {
     }
 }
 
@@ -108,19 +176,29 @@ function Set-NSOneRecordAnswerMetaProperty {
 function Get-NSOneRecordAnswer {
     [cmdletbinding()]
     param(
-        [Parameter(ValueFromPipeline)][PSObject[]]$records
+        [Parameter(ValueFromPipeline)][PSObject[]]$records,
+        [Parameter(Mandatory=$false,Position=0,ParameterSetName="byIndex")][string]$index
     )
     begin {
     }
     process {
         foreach ($record in $records) {
-            foreach ($answer in $record.answers) {
+            if ($index) {
                 $resultObject = New-Object PSObject
                 $resultObject | Add-Member Noteproperty Zone $record.zone
                 $resultObject | Add-Member Noteproperty Domain $record.domain
                 $resultObject | Add-Member Noteproperty Type $record.type
-                $resultObject | Add-Member Noteproperty Answer $answer[0]
+                $resultObject | Add-Member Noteproperty Answer $record.answers[$index]
                 $resultObject
+            } else {
+                foreach ($answer in $record.answers) {
+                    $resultObject = New-Object PSObject
+                    $resultObject | Add-Member Noteproperty Zone $record.zone
+                    $resultObject | Add-Member Noteproperty Domain $record.domain
+                    $resultObject | Add-Member Noteproperty Type $record.type
+                    $resultObject | Add-Member Noteproperty Answer $answer[0]
+                    $resultObject
+                }
             }
         }
     }
@@ -174,7 +252,6 @@ function Get-NSOneDynamicIP {
 
 function Set-NSOneRESTErrorResponse {
     if ($_.Exception.Response) {
-        $nsoneRESTErrorResponse.tenant = $nsoneConfig.tenant
         $nsoneRESTErrorResponse.apitoken = $nsoneConfig.apitoken
         $nsoneRESTErrorResponse.statusCode = $_.Exception.Response.StatusCode
         $nsoneRESTErrorResponse.statusDescription = $_.Exception.Response.StatusDescription
