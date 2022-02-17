@@ -27,7 +27,7 @@ Set-NSOneRecordAnswerMetaProperty: change the value of a specified answer within
 	-index mandatory unless answer specified, index of answer to set
 	-value mandatory, new answer value
 
-Get-NSOneZone: returns inforation about a zone
+Get-NSOneZone: returns information about a zone
 	-zone mandatory
 
 Update-NSOneZone: updates NSOne zone information from zone objects on the pipeline
